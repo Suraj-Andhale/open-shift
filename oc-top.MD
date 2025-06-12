@@ -146,6 +146,11 @@ oc get apiservices                      # API services running
 oc explain <resource>                   # Get documentation of resource
 ```
 
+PV and PVC
+
+oc create pvc my-pvc --storage=1Gi --access-mode=ReadWriteOnce --storage-class=gp2 -n my-namespace
+oc get storageclass
+
 ---
 
 **Note:** Use `-n <namespace>` with most commands to specify a namespace. Combine with `-o yaml/json/wide` for more output formats.
