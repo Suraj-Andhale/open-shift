@@ -150,7 +150,7 @@ PV and PVC
 
 oc create pvc my-pvc --storage=1Gi --access-mode=ReadWriteOnce --storage-class=gp2 -n my-namespace
 oc get storageclass
-
+oc get svc --all-namespaces -o custom-columns="NAMESPACE:.metadata.namespace,NAME:.metadata.name,PORTS:.spec.ports[*].port" ---------to check all used port numbers on cluster
 ---
 
 **Note:** Use `-n <namespace>` with most commands to specify a namespace. Combine with `-o yaml/json/wide` for more output formats.
