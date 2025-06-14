@@ -275,3 +275,11 @@ tolerations:
 podDisruptionBudget:
   enabled: true
   minAvailable: 2
+
+
+
+oc create secret generic txn-transactionsservice-secrets \
+  --from-literal=username=admin \
+  --from-literal=password='SBI@1234' \
+  -n devops-admin
+  
