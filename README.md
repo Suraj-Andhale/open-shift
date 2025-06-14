@@ -107,3 +107,171 @@ data:
     scheduler.cron.expression.alert=0 */5 * * * ?
     scheduler.cron.expression.notification=0 */5 * * * ?
 {{- end }}
+
+
+
+
+
+
+
+
+# Default values for epaytransactionservice.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 3
+
+image:
+  repository: "registry.dev.sbiepay.sbi:8443/library/{{ .Chart.Name }}"
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  #tag: "v-release-20250506135014"
+  tag: "v-release-20250506135014"
+
+imagePullSecrets:
+  - name: regcred
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount: 
+  create: true
+  annotations:
+    app.kubernetes.io/part-of: epay-platform
+  name: txn-service-account
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9092"
+  prometheus.io/path: "/actuator/prometheus"
+podLabels:
+  app.kubernetes.io/part-of: epay-platform
+  environment: pre-prod
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  runAsNonRoot: true
+  runAsUser: 1000
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+
+service:
+  type: ClusterIP
+  port: 9092
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "9092"
+
+namespace: pre-prod-transaction
+gatewayName: pre-prod-istio-system/epay-pre-prod-gateway
+virtualServiceName: txn-transactionservice
+serviceName: txn-transactionservice
+prefixName: /api/transaction/v1
+servicePort: 9092
+gatewayPort: 80
+gatewayHost: "pre-prod.epay.sbi"
+
+configMap: 
+  additionalLabels:
+    app.kubernetes.io/part-of: epay-platform
+    environment: pre-prod
+  annotations:
+    app.kubernetes.io/managed-by: helm
+  nameSuffix: "config"
+
+resources:
+  limits:
+    cpu: 2
+    memory: 4Gi
+  requests:
+    cpu: 1
+    memory: 2Gi
+
+ingress:
+  enabled: false
+
+readinessProbe:
+  httpGet:
+    path: /actuator/health/readiness
+    port: 9092
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+  successThreshold: 1
+
+livenessProbe:
+  httpGet:
+    path: /actuator/health/liveness
+    port: 9092
+  initialDelaySeconds: 60
+  periodSeconds: 20
+  timeoutSeconds: 10
+  failureThreshold: 6
+  successThreshold: 1
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# Additional volumes for configuration and secrets
+volumes:
+  - name: config-volume
+    configMap:
+      name: txn-transactionservice-config
+  - name: secrets-volume
+    secret:
+      secretName: txn-transactionservice-secrets
+  - name: tmp-volume
+    emptyDir: {}
+
+# Mount points for volumes
+volumeMounts:
+  - name: config-volume
+    mountPath: "/opt/app/config"
+    readOnly: true
+  - name: secrets-volume
+    mountPath: "/opt/app/secrets"
+    readOnly: true
+  - name: tmp-volume
+    mountPath: "/tmp"
+
+nodeSelector:
+  node-type: app
+
+# Ensure pods are scheduled on different nodes
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - txn-transactionservice
+          topologyKey: kubernetes.io/hostname
+
+# Allow scheduling on nodes with taints
+tolerations:
+  - key: "app"
+    operator: "Equal"
+    value: "transaction"
+    effect: "NoSchedule"
+
+# Pod disruption budget for high availability
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2
