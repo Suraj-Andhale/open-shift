@@ -6,7 +6,6 @@ helm install my-release ./my-helm-chart --dry-run --debug
 
 helm upgrade my-release ./my-helm-chart --dry-run --debug
 
-oc whoami
 oc auth can-i create deployment --namespace=my-namespace
 
 helm install my-release ./my-helm-chart --namespace my-namespace
